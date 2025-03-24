@@ -1,0 +1,32 @@
+import pandas as pd
+import numpy as np
+
+# Citește fișierul Parquet
+df = pd.read_parquet(r"C:\Users\x64\Desktop\pythonProject\veridion_product_deduplication_challenge.snappy.parquet", engine="pyarrow")
+
+# Funcție pentru consolidarea datelor
+def merge_values(series):
+    return ', '.join(series.dropna().astype(str).unique())
+
+# Curăță datele pentru a evita erori la grupare
+df['product_identifier'] = df['product_identifier'].astype(str)
+
+# Identificăm duplicatele pe baza identificatorului unic al produsului
+if 'product_identifier' in df.columns:
+    print("Coloana 'product_identifier' există.")
+    deduplicated_df = df.groupby('product_identifier').agg(merge_values).reset_index()
+else:
+    print("Coloana 'product_identifier' nu există. Se va folosi gruparea pe alte coloane.")
+    deduplicated_df = df.groupby(['product_name', 'brand', 'size', 'color', 'materials']).agg(merge_values).reset_index()
+
+# Salvăm rezultatul
+output_path = "deduplicated_products.parquet"
+deduplicated_df.to_parquet(output_path, index=False)
+
+print(f"Fișierul deduplicat a fost salvat ca {output_path}")
+
+df_deduplicated = pd.read_parquet("deduplicated_products.parquet")
+print(df_deduplicated.head())
+print(f"Număr inițial de rânduri: {df.shape[0]}")
+print(f"Număr de rânduri după deduplicare: {deduplicated_df.shape[0]}")
+
